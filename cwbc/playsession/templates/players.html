@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page 1</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <script src="{% static 'js/index.js' %}"></script>
+</head>
+<body class="teal-bg">
+  <div class="center-content">
+    {# <button id="showFormButton">CREATE PLAYER</button> #}
+    {# <div id="entityForm" style="display: none;"> #}
+    {# </div> #}
+    {##}
+    {# <script> #}
+    {# document.getElementById('showFormButton').addEventListener('click', function() { #}
+    {#   document.getElementById('entityForm').style.display = 'block'; #}
+    {# }); #}
+    {# </script> #}
+    {# <form id="entityForm" method="POST" action="{% url 'player_crud' %}"> #}
+    {#   {% csrf_token %} #}
+    {#   <button type="submit">Create</button> #}
+    {# </form> #}
+    <button class="button" onclick="goToPage('update')">UPDATE PLAYER</button>
+    <button class="button" onclick="goToPage('create')">CREATE PLAYER</button>
+    <button class="button" onclick="goToPage('get')">RETRIEVE PLAYER</button>
+    <button class="button" onclick="goToPage('delete')">REMOVE PLAYER</button>
+  </div>
+</body>
+</html>

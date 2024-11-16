@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CITYWEST BADMINTION CLUB</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #ddd;
+        }
+        .session-title {
+            margin-top: 30px;
+            font-size: 1.5em;
+            color: #4CAF50;
+        }
+        .rested-players {
+            text-align: center;
+            font-weight: bold;
+        }
+        .timer-container {
+            margin-top: 20px;
+        }
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 20px;
+        }
+        #paymentTime, #newSession, #endMessage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3em;
+            z-index: 1000;
+        }
+        #output {
+            transition: opacity 0.5s ease-in-out; 
+        }
+    </style>
+</head>
+<body>
+
+<h1>CITYWEST BADMINTION CLUB</h1>
+<input type="file" id="csvFileInput" accept=".csv" />
+<div id="output"></div>
+
+<div class="timer-container">
+    <label for="timerInput">Set Timer (minutes): </label>
+    <input type="number" id="timerInput" min="1" max="30" />
+    <button id="startTimerButton">Start Timer</button>
+    <div id="timerDisplay"></div>
+</div>
+
+<div class="navigation-buttons">
+    <button id="prevButton" style="display:none;">Previous</button>
+    <button id="nextButton" style="display:none;">Next</button>
+</div>
+
+<div id="paymentTime" style="display:none;">Payment Time</div>
+<div id="newSession" style="display:none;"></div>
+<div id="endMessage" style="display:none;">Have a nice day!</div>
+
+<script>
+    const today = new Date();
+    const day = today.getDay();
+    let defaultTimerValue;
+
+    if (day === 0) { // Sunday
+        defaultTimerValue = 22; 
+    } else if (day === 2) { // Tuesday
+        defaultTimerValue = 15; 
+    } else if (day === 4 || day === 5) { // Thursday or Friday
+        defaultTimerValue = 21; 
+    } else { // Default for other days
+        defaultTimerValue = 30; 
+    }
+
+    document.getElementById('timerInput').value = defaultTimerValue;
+
+    let sessions = {};
+    let currentSessionIndex = 0; 
+    let countdownInterval;
+
+    document.getElementById('csvFileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const csvData = event.target.result;
+                parseCSVData(csvData);
+                displayCurrentSession();
+                startCountdown(); // Start countdown when session is displayed
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    function parseCSVData(csvData) {
+        const rows = csvData.split('\n');
+        sessions = {};
+        
+        let currentSessionTitle = '';
+        
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i].trim();
+            
+            if (row.startsWith('Session')) {
+                currentSessionTitle = row; // Save the current session title
+                sessions[currentSessionTitle] = { allocations: [], restedPlayers: '' };
+                continue; // Skip to the next iteration
+            }
+
+            if (currentSessionTitle && row.startsWith("Court")) {
+                sessions[currentSessionTitle].allocations.push(row.split(','));
+            }
+
+            if (currentSessionTitle && row.startsWith("Rested Players")) {
+                sessions[currentSessionTitle].restedPlayers = row.split(',').slice(1).join(', ');
+            }
+        }
+    }
+
+    function displayCurrentSession() {
+        const outputDiv = document.getElementById('output');
+        outputDiv.innerHTML = '';
+
+        const sessionTitle = Object.keys(sessions)[currentSessionIndex];
+        const { allocations, restedPlayers } = sessions[sessionTitle];
+
+        const sessionDiv = document.createElement('div');
+        sessionDiv.classList.add('session-title');
+        sessionDiv.textContent = sessionTitle;
+
+        const table = document.createElement('table');
+        
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = '<th>Court</th>';
+        
+        allocations.forEach(allocation => {
+           headerRow.innerHTML += `<th>${allocation[0]}</th>`;
+       });
+       
+       table.appendChild(headerRow);
+
+       const maxPlayers = Math.max(...allocations.map(allocation => allocation.length - 1));
+       
+       for (let playerIndex = 1; playerIndex <= maxPlayers; playerIndex++) { // Start from index 1 to skip "Court"
+           const row = document.createElement('tr');
+           row.innerHTML += `<td>Player ${playerIndex}</td>`;
+
+           allocations.forEach(allocation => {
+               row.innerHTML += `<td>${allocation[playerIndex] || ''}</td>`; // Add player names or empty cell
+           });
+
+           table.appendChild(row);
+       }
+
+       outputDiv.appendChild(sessionDiv);
+       outputDiv.appendChild(table);
+
+       const restedPlayersDiv = document.createElement('div');
+       restedPlayersDiv.classList.add('rested-players');
+       restedPlayersDiv.innerHTML = `<strong>Rested Players:</strong> ${restedPlayers}`;
+       
+       outputDiv.appendChild(restedPlayersDiv);
+
+       document.getElementById('prevButton').style.display = currentSessionIndex > 0 ? 'block' : 'none';
+       document.getElementById('nextButton').style.display = currentSessionIndex < Object.keys(sessions).length - 1 ? 'block' : 'none';
+
+       adjustLayout();
+   }
+
+   function adjustLayout() {
+       const vh = window.innerHeight; // Get viewport height
+       document.body.style.minHeight = `${vh}px`;
+       document.getElementById('output').style.marginBottom = `${vh * 0.2}px`;
+   }
+
+    function playBeep(duration) {
+       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+       const oscillator = audioContext.createOscillator();
+       const gainNode = audioContext.createGain();
+
+       oscillator.connect(gainNode);
+       gainNode.connect(audioContext.destination);
+
+       oscillator.type = 'sine';
+       oscillator.frequency.value = 800; // frequency in hertz
+
+       gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+       gainNode.gain.linearRampToValueAtTime(1, audioContext.currentTime + 0.01);
+
+       oscillator.start(audioContext.currentTime);
+
+       const stopTime = audioContext.currentTime + duration / 1000;
+
+       gainNode.gain.setValueAtTime(1, stopTime - 0.01);
+       gainNode.gain.linearRampToValueAtTime(0, stopTime);
+       oscillator.stop(stopTime);
+   }
+
+   function playRepeatedBeep(duration, interval, totalDuration) {
+       let elapsedTime = 0;
+       const beepInterval = setInterval(() => {
+           playBeep(duration);
+           elapsedTime += interval;
+           if (elapsedTime >= totalDuration) {
+               clearInterval(beepInterval);
+           }
+       }, interval);
+   }
+
+   function startCountdown() {
+       if (countdownInterval) clearInterval(countdownInterval);
+
+       let timerValue = parseInt(document.getElementById('timerInput').value) * 60;
+
+       document.getElementById('timerDisplay').textContent =
+           `Time Remaining: ${Math.floor(timerValue / 60)}:${(timerValue % 60).toString().padStart(2, '0')}`;
+
+       countdownInterval = setInterval(() => {
+           timerValue--;
+
+           document.getElementById('timerDisplay').textContent =
+               `Time Remaining: ${Math.floor(timerValue / 60)}:${(timerValue % 60).toString().padStart(2, '0')}`;
+
+           if (timerValue <= 0) { // When timer reaches zero
+               clearInterval(countdownInterval);
+               playRepeatedBeep(200, 500, 10000); // 200ms beep every 500ms for 10 seconds
+               if (currentSessionIndex === Object.keys(sessions).length - 1) { // End of Session 5
+                   showEndMessage();
+               } else if (currentSessionIndex === 2) { // After Session 3
+                   showPaymentTime();
+               } else { 
+                   currentSessionIndex++;
+                   displayCurrentSession(); // Display next session
+                   startCountdown(); // Start timer for next session
+               }
+           }
+       }, 1000);
+   }
+
+   function showPaymentTime() {
+       document.getElementById('paymentTime').style.display = 'flex';
+       setTimeout(() => {
+           document.getElementById('paymentTime').style.display = 'none';
+           currentSessionIndex++;
+           displayCurrentSession();
+           startCountdown();
+       }, 30000); // Show payment time for 30 seconds
+   }
+
+   function showEndMessage() {
+       clearInterval(countdownInterval); // Stop all timers
+       document.getElementById('endMessage').style.display = 'flex'; // Show end message
+   }
+
+   document.getElementById('startTimerButton').addEventListener('click', startCountdown);
+
+   document.getElementById('nextButton').addEventListener('click', () => {
+       if (confirm("Are you sure you want to go to the next session? This will reset the timer.")) {
+           currentSessionIndex++;
+           displayCurrentSession();
+           startCountdown(); 
+       }
+   });
+
+   document.getElementById('prevButton').addEventListener('click', () => {
+       if (confirm("Are you sure you want to go to the previous session? This will reset the timer.")) {
+           currentSessionIndex--;
+           displayCurrentSession();
+           startCountdown(); 
+       }
+   });
+
+   window.addEventListener('resize', adjustLayout);
+</script>
+
+</body>
+</html>
