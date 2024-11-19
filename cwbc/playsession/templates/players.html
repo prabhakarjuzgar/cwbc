@@ -2,31 +2,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Page 1</title>
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-  <script src="{% static 'js/index.js' %}"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLAYERS</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <script src="{% static 'js/index.js' %}"></script>
 </head>
 <body class="teal-bg">
-  <div class="center-content">
-    {# <button id="showFormButton">CREATE PLAYER</button> #}
-    {# <div id="entityForm" style="display: none;"> #}
-    {# </div> #}
-    {##}
-    {# <script> #}
-    {# document.getElementById('showFormButton').addEventListener('click', function() { #}
-    {#   document.getElementById('entityForm').style.display = 'block'; #}
-    {# }); #}
-    {# </script> #}
-    {# <form id="entityForm" method="POST" action="{% url 'player_crud' %}"> #}
-    {#   {% csrf_token %} #}
-    {#   <button type="submit">Create</button> #}
-    {# </form> #}
-    <button class="button" onclick="goToPage('update')">UPDATE PLAYER</button>
-    <button class="button" onclick="goToPage('create')">CREATE PLAYER</button>
-    <button class="button" onclick="goToPage('get')">RETRIEVE PLAYER</button>
-    <button class="button" onclick="goToPage('delete')">REMOVE PLAYER</button>
-  </div>
+    <h1>Display All Players</h1>
+    <div id="playerButtons" class="responsive-grid"></div>
+    
+    <!-- Button to trigger data fetch -->
+    <button id="fetch-players">Fetch Players</button>
+    
+    <script>
+        // Add an event listener to the button
+        document.getElementById('fetch-players').addEventListener('click', () => {
+            const playerButtonsDiv = document.getElementById('playerButtons');
+            playerButtonsDiv.innerHTML = '';
+
+            // Fetch data from the ModelViewSet endpoint
+            fetch('/api/playsession/')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    data.forEach(item => {
+                        const playerDiv = document.createElement('div');
+                        playerDiv.classList.add('player-div');
+                        playerDiv.onclick = () => togglePlayerNumber(item.id, playerDiv);
+                        playerDiv.innerText = `${item.name}`;
+                        playerDiv.id = `player-${item.name.replace(/\s+/g, '-')}`;
+                        playerButtonsDiv.appendChild(playerDiv);
+                        playerInfo[item.id] = { number: null, division: item.division };
+
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    const errorItem = document.createElement('li');
+                    errorItem.textContent = 'Error fetching data. Please try again.';
+                    // list.appendChild(errorItem);
+                });
+        });
+    </script>
+
+    <script>
+        // JavaScript to handle form submission
+        async function createPlayer(event) {
+            event.preventDefault(); // Prevent form default submission
+
+            // Collect form data
+            const name = document.getElementById("name").value;
+            const division = document.getElementById("division").value;
+            const secondaryDivision = document.getElementById("secondary_division").value;
+
+            // CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // Make an AJAX POST request
+            const response = await fetch("", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken // Include CSRF token in headers
+                },
+                body: JSON.stringify({
+                    name: name,
+                    division: division,
+                    secondary_division: secondaryDivision
+                })
+            });
+
+            // Handle the response
+            if (response.ok) {
+                const data = await response.json();
+                alert("User created successfully: " + JSON.stringify(data));
+            } else {
+                const error = await response.json();
+                alert("Error: " + JSON.stringify(error));
+            }
+        }
+    </script>
+
+    <h1>Create New Player</h1>
+    <form id="createPlayerForm">
+        {% csrf_token %}
+        <label for="name">name:</label>
+        <input type="text" id="name" name="name" required><br>
+
+        <label for="division">Division:</label>
+        <input type="number" id="division" name="division" min="1" max="11" required><br>
+
+        <label for="secondary_division">Secondary Division:</label>
+        <input type="number" id="secondary_division" name="secondary_division" min="1" max="11" required><br>
+
+        <button type="button" onclick="createPlayer(event)">Create User</button>
+    </form>
 </body>
 </html>

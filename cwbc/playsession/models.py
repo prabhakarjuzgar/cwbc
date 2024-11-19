@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Player(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created = models.DateTimeField(auto_now_add=True)
     name = models.CharField(max_length=100)
     division = models.IntegerField(
@@ -26,3 +26,4 @@ class PlaySession(models.Model):
 
     class Meta:
         ordering = ['created']
+        get_latest_by = 'created'

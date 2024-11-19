@@ -1,8 +1,10 @@
+import json
 from django.views.generic import TemplateView
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
-from rest_framework.renderers import TemplateHTMLRenderer
+from django.shortcuts import render
+# from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 
 from .models import Player, PlaySession
@@ -31,15 +33,24 @@ class IndexView(TemplateView):
 class PlayerView(TemplateView):
     template_name = 'players.html'
 
+    def post(self, request, *args, **kwargs):
+        # Create the entity using the ModelViewSet
+        data = json.loads(request.body.decode())
+        serializer = PlayerSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            # return redirect('success_url')  # Redirect to a success page
+        return render(request, 'players.html', {'form': serializer})
+
 
 class SessionView(TemplateView):
-    template_name = 'generate.html'
+    template_name = 'session.html'
 
 
 class PlayerViewSet(viewsets.ModelViewSet):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
-    renderer_classes = [TemplateHTMLRenderer]
+    # renderer_classes = [TemplateHTMLRenderer]
     # template_name = 'players.html'  # Your template name
 
     def get_permissions(self):
@@ -51,16 +62,17 @@ class PlayerViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+        serializer = PlayerSerializer(queryset, many=True)
 
-        return Response({'players': queryset},
-                        status=status.HTTP_200_OK,
-                        template_name='list.html')
+        return Response(serializer.data)
+        # return Response({'players': queryset},
+        #                 status=status.HTTP_200_OK)
+        #                 # template_name='list.html')
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         return Response({'player': instance})
 
-    # @action(detail=False, methods=['post'], url_path='actions/create')
     def ceate(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -70,54 +82,78 @@ class PlayerViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_201_CREATED,
                         headers=headers)
 
-    # @action(detail=False, methods=['post'], url_path='generate')
-    # def generate_session(self, request):
-    #     players = request.data.get("players")
-    #     if not players:
-    #         return Response({"error": "No names provided"},
-    #                         status=status.HTTP_400_BAD_REQUEST)
-    #
-    #     # serializer = self.get_serializer(users, many=True)
-    #     return Response(session_generator(players), status=status.HTTP_200_OK, template_name='page12.html')
 
-
+# class PlaySessionViewSet(TemplateView):
 class PlaySessionViewSet(viewsets.ModelViewSet):
     queryset = PlaySession.objects.all()
     serializer_class = SessionSerializer
-    renderer_classes = [TemplateHTMLRenderer]
-    template_name = 'page1.html'  # Your template name
+    # renderer_classes = [TemplateHTMLRenderer]
+    # template_name = 'generate.html'  # Your template name
 
     def get_permissions(self):
-        if self.action == 'list':
-            permission_classes = [AllowAny]
-        else:
+        if self.action == 'post':
             permission_classes = [IsAdminUser]
+        else:
+            permission_classes = [AllowAny]
         return [permission() for permission in permission_classes]
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        return Response({'player': instance})
+        serializer = SessionSerializer(data=instance)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
 
-    @action(detail=False, methods=['post'], url_path='generate')
-    def generate_session(self, request):
-        players = request.data.get("players")
+    @action(detail=False, methods=['GET'], url_path='recent')
+    def recent(self, request, *args, **kwargs):
+        instance = self.get_queryset().latest()
+        if instance:
+            return Response(instance.data)
+
+        return Response({'error': 'No data found'}, status=404)
+
+    def create(self, request):
+        players = request.data["data"]["selected_players"]
         if not players:
             return Response({"error": "No names provided"},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        # serializer = self.get_serializer(users, many=True)
-        return Response(session_generator(players), status=status.HTTP_200_OK, template_name='page12.html')
+        serializer = SessionSerializer(data=session_generator(players))
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 def session_generator(players):
     initialize_player(players)
 
-    data = {}
-    data["Session1"], data["Rested"] = session_1(players)
-    data["Session2"], data["Rested"] = session_2(players)
-    data["Session3"], data["Rested"] = session_3(players)
-    data["Session4"], data["Rested"] = session_4(players)
-    data["Session5"], data["Rested"] = session_5(players)
+    data = {"data": []}
+    playing, rested = session_1(players)
+    data["data"].append({
+        "Session": playing,
+        "Rested": rested
+    })
+    print("ALLOCATION", data)
+    playing, rested = session_2(players)
+    data["data"].append({
+        "Session": playing,
+        "Rested": rested
+    })
+    playing, rested = session_3(players)
+    data["data"].append({
+        "Session": playing,
+        "Rested": rested
+    })
+    playing, rested = session_4(players)
+    data["data"].append({
+        "Session": playing,
+        "Rested": rested
+    })
+    playing, rested = session_5(players)
+    data["data"].append({
+        "Session": playing,
+        "Rested": rested
+    })
 
     return data
 
@@ -192,8 +228,7 @@ def session_2(players):
     rested_players = rest_players(players, rest_indices)
     print(f"Session 2 Rested Players: {rested_players}")
 
-    courts = {}
-    allocate_players(players, lambda players: min(players, key=lambda x: x["secondary_division"]), 2)
+    courts = allocate_players(players, lambda players: min(players, key=lambda x: x["secondary_division"]), 2)
 
     return courts, rested_players
 
@@ -208,7 +243,6 @@ def session_3(players):
     courts = {}
 
     def select_mixed_player(players):
-        breakpoint()
         eligible_players = [p for p in players if p["mixed"] == 0]
         if not eligible_players:
             return None

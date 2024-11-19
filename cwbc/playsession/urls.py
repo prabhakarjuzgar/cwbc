@@ -8,13 +8,15 @@ from .views import (
     Page1View,
     PlayerView,
     PlayerViewSet,
+    PlaySessionViewSet,
     SessionView,
 )
 
 router = DefaultRouter()
 # router.register(r'players', PlayerViewSet, basename='players')
-# router.register(r'playsession', PlayerViewSet, basename='playsession')
-router.register(r'player_crud', PlayerViewSet, basename='player_crud')
+router.register(r'playsession', PlayerViewSet, basename='playsession')
+router.register(r'session/generate', PlaySessionViewSet, basename='session/generate')
+# router.register(r'player_crud', PlayerViewSet, basename='player_crud')
 
 urlpatterns = [
     # path('api-auth/', include('rest_framework.urls')),
@@ -27,6 +29,11 @@ urlpatterns = [
          name='login',
          ),
     path('players/', PlayerView.as_view(), name='players'),
-    path('generate/', SessionView.as_view(), name='generate'),
+    # path('session/', SessionView.as_view({'get': 'list',
+    #                                               'generate': 'post'},
+    #                                              template_name='generate.html'),
+    #      name='generate'),
+    path('session/', SessionView.as_view(template_name='session.html'),
+         name='session'),
     path('', include(router.urls)),
 ]

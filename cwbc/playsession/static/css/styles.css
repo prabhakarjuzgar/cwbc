@@ -88,6 +88,26 @@
   font-size: 16px;
 }
 
+#fetch-players {
+  margin: 10px;
+  padding: 10px 20px;
+  color: teal;
+  background-color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#generate-session {
+  margin: 10px;
+  padding: 10px 20px;
+  color: teal;
+  background-color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
 .player-grid {
   display: grid;
   gap: 10px;

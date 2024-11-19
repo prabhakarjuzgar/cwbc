@@ -1,0 +1,137 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GENERATE WEEKLY SESSIONS</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <script src="{% static 'js/index.js' %}"></script>
+</head>
+<body class="teal-bg">
+    <h1>Display All Players</h1>
+    <div id="playerButtons" class="responsive-grid"></div>
+    
+    <!-- Button to trigger data fetch -->
+    <button id="fetch-players">Fetch Players</button>
+    <button id="generate-session">WEEKLY COURT ALLOCATION</button>
+    
+    <script>
+        // Add an event listener to the button
+        document.getElementById('fetch-players').addEventListener('click', () => {
+            const playerButtonsDiv = document.getElementById('playerButtons');
+            playerButtonsDiv.innerHTML = '';
+            // playerInfo = {}
+
+            fetch('/api/playsession/')
+            .then(response => {
+                if (!response.ok) {
+                throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                data.forEach(item => {
+                    const sessionDiv = document.createElement('div');
+                    sessionDiv.classList.add('player-div');
+                    //sessionDiv.onclick = () => togglePlayerNumber(item.name, sessionDiv);
+                    sessionDiv.onclick = () => togglePlayerNumber(item.id, sessionDiv);
+                    sessionDiv.innerText = `${item.name}`;
+                    sessionDiv.id = `player-${item.name.replace(/\s+/g, '-')}`;
+                    playerButtonsDiv.appendChild(sessionDiv);
+                    playerInfo[item.id] = {
+                            number: null,
+                            division: item.division,
+                            secondary_division: item.secondary_division,
+                            name: item.name
+                        };
+                    // playerInfo[item.name] = { number: null, division: item.division, secondary_division: item.secondary_division };
+                    });
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                const errorItem = document.createElement('li');
+                errorItem.textContent = 'Error fetching data. Please try again.';
+            });
+        });
+    </script>
+
+    {# <button id="generate-session">WEEKLY COURT ALLOCATION</button> #}
+    <div id="session-container"></div>
+    <script>
+        // JavaScript to handle form submission
+        document.getElementById('generate-session').addEventListener('click', () => {
+            const selectedPlayerList = Object.keys(playerInfo)
+            .filter(id => playerInfo[id])
+            .map(id => ({
+                name: playerInfo[id].name,
+                division: playerInfo[id].division,
+                secondary_division: playerInfo[id].secondary_division
+            }));
+            if (selectedPlayerList.length === 0) {
+            alert("Please select players to generate session.");
+            return;
+            }
+            const csrfToken = '{{ csrf_token }}'
+
+            const data = {
+            selected_players: selectedPlayerList,  // Array of selected player names
+            };
+            const sessionContainer = document.getElementById('session-container');
+            sessionContainer.innerHTML = '';
+            let sessionCntr = 0;
+            // Make an AJAX POST request
+            fetch("/api/session/generate/", {
+                    method: "POST",
+                    headers: {
+                        "Accept": "application/json",
+                        'Content-Type': 'application/json',
+                        "X-CSRFToken": csrfToken // Include CSRF token in headers
+                    },
+                    body: JSON.stringify({data})
+                })
+                .then(response => response.json())
+                .then(responseData => {
+                    const data = responseData.data;
+                    const sessionHeader = document.createElement('h2');
+                    sessionHeader.textContent = 'Allocation Results';
+                    sessionContainer.appendChild(sessionHeader);
+                    data.forEach(item => {
+                        sessionCntr++;
+                        const session = item.Session;
+                        const rested = item.Rested;
+                        const numSessions = Object.keys(session).length;
+                        const sessionAllocation = document.createElement('div');
+                        sessionAllocation.textContent = `Session-${sessionCntr} Court Allocation`;
+                        sessionAllocation.style.textAlign = 'left';
+                        sessionContainer.appendChild(sessionAllocation);
+
+                        for (let i = 1; i <= numSessions; i++) {
+                            const allocation = session[i]
+                            const names = extractNames(allocation)
+
+                            const allocationDiv = document.createElement('div');
+                            allocationDiv.textContent = `Court ${i}: ${names}`;
+                            allocationDiv.style.textAlign = 'left';
+                            sessionContainer.appendChild(allocationDiv);
+                        }
+                        const restedDiv = document.createElement('div');
+                        restedDiv.textContent = `Rested: ${rested.join(', ')}`;
+                        restedDiv.style.textAlign = 'left'
+                        sessionContainer.appendChild(restedDiv);
+
+                        sessionContainer.appendChild(document.createElement('hr'));
+                    });
+
+                    // Handle successful response data (e.g., display message, update UI)
+                    console.log("Session Generated:", responseData);
+                })
+                .catch(error => {
+                    console.error("Error generating session:", error);
+                    alert("An error occurred. Please try again.");
+                });
+            });
+    </script>
+</body>
+</html>

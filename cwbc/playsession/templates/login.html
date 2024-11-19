@@ -1,14 +1,19 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login</title>
+  <title>Login</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <script src="{% static 'js/index.js' %}"></script>
 </head>
-<body>
+<body class="teal-bg">
+  <div class="center-content">
     <!-- <form method="post" action="{% url 'login' %}?next={{ request.GET.next }}"> -->
     <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit">Login</button>
     </form>
+  </div>
 </body>
 </html>
