@@ -25,7 +25,7 @@ class PlayerSerializer(serializers.ModelSerializer):
         secondary_division = data.get('secondary_division')
 
         if secondary_division is not None:
-            if secondary_division >= division:
+            if secondary_division > division:
                 raise serializers.ValidationError(
                     "Secondary division must be less than the primary division."
                 )

@@ -4,7 +4,6 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from django.shortcuts import render
-# from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 
 from .models import Player, PlaySession
@@ -50,8 +49,6 @@ class SessionView(TemplateView):
 class PlayerViewSet(viewsets.ModelViewSet):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
-    # renderer_classes = [TemplateHTMLRenderer]
-    # template_name = 'players.html'  # Your template name
 
     def get_permissions(self):
         if self.action == 'list':
@@ -65,9 +62,6 @@ class PlayerViewSet(viewsets.ModelViewSet):
         serializer = PlayerSerializer(queryset, many=True)
 
         return Response(serializer.data)
-        # return Response({'players': queryset},
-        #                 status=status.HTTP_200_OK)
-        #                 # template_name='list.html')
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -82,13 +76,16 @@ class PlayerViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_201_CREATED,
                         headers=headers)
 
+    def patch(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
 
-# class PlaySessionViewSet(TemplateView):
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+
 class PlaySessionViewSet(viewsets.ModelViewSet):
     queryset = PlaySession.objects.all()
     serializer_class = SessionSerializer
-    # renderer_classes = [TemplateHTMLRenderer]
-    # template_name = 'generate.html'  # Your template name
 
     def get_permissions(self):
         if self.action == 'post':
