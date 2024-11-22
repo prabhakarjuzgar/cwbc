@@ -1,3 +1,5 @@
 .python_version
 __pycache__/
 db.sqlite3
+cwbc/__pycache__
+cwbc/platforms/__pycache__
